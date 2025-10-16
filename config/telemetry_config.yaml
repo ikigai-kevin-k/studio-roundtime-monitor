@@ -1,0 +1,101 @@
+# Studio Round Time Monitor - Telemetry Integration Configuration
+
+# This configuration demonstrates how to integrate the Studio Round Time Monitor
+# with remote telemetry infrastructure (Loki and Prometheus) deployed on GE or TPE servers.
+
+# Monitor settings
+monitor:
+  enabled: true
+  tableapi_enabled: true
+  roulette_enabled: true
+  sicbo_enabled: true
+
+# Storage configuration - Using telemetry instead of local storage
+storage:
+  type: "telemetry"  # Send data to remote telemetry servers
+  
+  # Telemetry configuration for remote servers
+  telemetry:
+    # Loki server configuration for log data
+    loki:
+      enabled: true
+      # GE Server (default)
+      url: "http://100.64.0.113:3100"
+      # TPE Server (alternative - uncomment to use)
+      # url: "http://100.64.0.160:3100"
+      instance_id: "studio-roundtime-monitor"
+    
+    # Prometheus Pushgateway configuration for metrics
+    prometheus:
+      enabled: true
+      # GE Server (default)
+      url: "http://100.64.0.113:9091"
+      # TPE Server (alternative - uncomment to use)
+      # url: "http://100.64.0.160:9091"
+      job_name: "studio-roundtime-monitor"
+    
+    # Data routing configuration - determines where different data types are sent
+    routing:
+      # Time interval data: Send to both Loki (for logs) and Prometheus (for metrics)
+      time_intervals:
+        loki: true
+        prometheus: true
+      
+      # Error data: Send to Loki only (errors are typically logged, not metered)
+      errors:
+        loki: true
+        prometheus: false
+      
+      # Counter metrics: Send to Prometheus only (counters are metrics, not logs)
+      counters:
+        loki: false
+        prometheus: true
+      
+      # Gauge metrics: Send to Prometheus only (gauges are metrics, not logs)
+      gauges:
+        loki: false
+        prometheus: true
+
+# Processing configuration
+processing:
+  interval: 5.0  # Processing interval in seconds
+  max_history: 1000  # Maximum number of intervals to keep in memory
+
+# Logging configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or console
+  file: "./logs/roundtime_monitor.log"
+  console: true
+
+# Export settings (for local backup/export if needed)
+export:
+  default_format: "json"  # json or csv
+  output_dir: "./exports"
+  include_metadata: true
+
+# Performance settings
+performance:
+  batch_size: 100  # Number of intervals to process in batch
+  cleanup_days: 30  # Days of data to keep in storage
+  anomaly_threshold: 2.0  # Standard deviation multiplier for anomaly detection
+
+# Telemetry-specific settings
+telemetry:
+  # Connection settings
+  connection:
+    timeout: 10  # Request timeout in seconds
+    retry_attempts: 3  # Number of retry attempts for failed requests
+    retry_delay: 1.0  # Delay between retry attempts in seconds
+  
+  # Data batching settings
+  batching:
+    enabled: true
+    batch_size: 50  # Number of data points to send in a single request
+    flush_interval: 30.0  # Maximum time to wait before flushing batch (seconds)
+  
+  # Monitoring settings
+  monitoring:
+    send_health_metrics: true  # Send health status metrics
+    send_performance_metrics: true  # Send performance metrics
+    health_check_interval: 60.0  # Health check interval in seconds

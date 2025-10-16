@@ -34,7 +34,7 @@ class IntervalRecord(Base):
     game_type = Column(String(50), nullable=False)
     table = Column(String(50), nullable=False)
     round_id = Column(String(100), nullable=False)
-    metadata = Column(JSON, nullable=True)
+    extra_data = Column(JSON, nullable=True)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -47,7 +47,7 @@ class IntervalRecord(Base):
             "game_type": self.game_type,
             "table": self.table,
             "round_id": self.round_id,
-            "metadata": self.metadata or {}
+            "metadata": self.extra_data or {}
         }
 
 class DatabaseStorage:
@@ -116,7 +116,7 @@ class DatabaseStorage:
                     game_type=interval.game_type,
                     table=interval.table,
                     round_id=interval.round_id,
-                    metadata=interval.metadata
+                    extra_data=interval.metadata
                 )
                 session.add(record)
 

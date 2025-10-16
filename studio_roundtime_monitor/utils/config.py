@@ -21,12 +21,42 @@ class MonitorConfigModel(BaseModel):
     roulette_enabled: bool = Field(default=True, description="Enable Roulette monitoring")
     sicbo_enabled: bool = Field(default=True, description="Enable Sicbo monitoring")
 
+class TelemetryLokiConfigModel(BaseModel):
+    """Pydantic model for Loki telemetry configuration."""
+    
+    enabled: bool = Field(default=True, description="Enable Loki integration")
+    url: str = Field(default="http://100.64.0.113:3100", description="Loki server URL")
+    instance_id: str = Field(default="studio-roundtime-monitor", description="Instance identifier")
+
+class TelemetryPrometheusConfigModel(BaseModel):
+    """Pydantic model for Prometheus telemetry configuration."""
+    
+    enabled: bool = Field(default=True, description="Enable Prometheus integration")
+    url: str = Field(default="http://100.64.0.113:9091", description="Prometheus Pushgateway URL")
+    job_name: str = Field(default="studio-roundtime-monitor", description="Job name for metrics")
+
+class TelemetryRoutingConfigModel(BaseModel):
+    """Pydantic model for telemetry data routing configuration."""
+    
+    time_intervals: Dict[str, bool] = Field(default={"loki": True, "prometheus": True}, description="Time interval routing")
+    errors: Dict[str, bool] = Field(default={"loki": True, "prometheus": False}, description="Error routing")
+    counters: Dict[str, bool] = Field(default={"loki": False, "prometheus": True}, description="Counter routing")
+    gauges: Dict[str, bool] = Field(default={"loki": False, "prometheus": True}, description="Gauge routing")
+
+class TelemetryConfigModel(BaseModel):
+    """Pydantic model for telemetry configuration."""
+    
+    loki: TelemetryLokiConfigModel = Field(default_factory=TelemetryLokiConfigModel)
+    prometheus: TelemetryPrometheusConfigModel = Field(default_factory=TelemetryPrometheusConfigModel)
+    routing: TelemetryRoutingConfigModel = Field(default_factory=TelemetryRoutingConfigModel)
+
 class StorageConfigModel(BaseModel):
     """Pydantic model for storage configuration validation."""
 
-    type: str = Field(default="json", description="Storage type (json, csv, database)")
+    type: str = Field(default="json", description="Storage type (json, csv, database, telemetry)")
     path: str = Field(default="./data/time_intervals.json", description="Storage path")
     database_url: Optional[str] = Field(default=None, description="Database URL for database storage")
+    telemetry: Optional[TelemetryConfigModel] = Field(default=None, description="Telemetry configuration")
 
 class ProcessingConfigModel(BaseModel):
     """Pydantic model for processing configuration validation."""
@@ -48,11 +78,19 @@ class MonitorConfig:
 
     def _validate(self):
         """Validate configuration values."""
-        if self.storage.type not in ["json", "csv", "database"]:
+        if self.storage.type not in ["json", "csv", "database", "telemetry"]:
             raise ValueError(f"Invalid storage type: {self.storage.type}")
 
         if self.storage.type == "database" and not self.storage.database_url:
             raise ValueError("Database URL is required for database storage")
+        
+        if self.storage.type == "telemetry" and not self.storage.telemetry:
+            raise ValueError("Telemetry configuration is required for telemetry storage")
+        
+        if self.storage.type == "telemetry" and self.storage.telemetry:
+            # Validate telemetry configuration
+            if not self.storage.telemetry.loki.enabled and not self.storage.telemetry.prometheus.enabled:
+                raise ValueError("At least one telemetry service (Loki or Prometheus) must be enabled")
 
         if self.processing.interval <= 0:
             raise ValueError("Processing interval must be positive")
@@ -74,6 +112,11 @@ class MonitorConfig:
         monitor_data = data.get("monitor", {})
         storage_data = data.get("storage", {})
         processing_data = data.get("processing", {})
+        
+        # Handle telemetry configuration
+        telemetry_data = storage_data.get("telemetry")
+        if telemetry_data:
+            storage_data["telemetry"] = TelemetryConfigModel(**telemetry_data)
 
         return cls(
             monitor=MonitorConfigModel(**monitor_data),

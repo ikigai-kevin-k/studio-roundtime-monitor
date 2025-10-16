@@ -1,71 +1,72 @@
 # Studio Round Time Monitor
 
-一個獨立的時間監控模組，用於統計 SDP 遊戲系統中各個組件的時間間隔，包括 TableAPI 調用時間、Roulette 設備運行時間和 Sicbo 設備運行時間。
+An independent time monitoring module for tracking time intervals of various components in the SDP gaming system, including TableAPI call times, Roulette device operation times, and Sicbo device operation times.
 
-## 功能特點
+## Features
 
-- **非侵入式監控**: 通過事件發布/訂閱系統收集時間數據，不干擾主遊戲邏輯
-- **多遊戲支持**: 支持 Roulette (Speed/VIP) 和 Sicbo 遊戲的時間監控
-- **全面覆蓋**: 監控 TableAPI 調用、設備狀態變化和 MQTT 消息時間
-- **數據持久化**: 支持 JSON、CSV 和數據庫存儲
-- **實時分析**: 提供時間間隔統計和異常檢測
+- **Non-intrusive Monitoring**: Collects time data through event publish/subscribe system without interfering with main game logic
+- **Multi-game Support**: Supports time monitoring for Roulette (Speed/VIP) and Sicbo games
+- **Comprehensive Coverage**: Monitors TableAPI calls, device state changes, and MQTT message timing
+- **Data Persistence**: Supports JSON, CSV, and database storage
+- **Real-time Analysis**: Provides time interval statistics and anomaly detection
 
-## 監控指標
+## Monitoring Metrics
 
-### TableAPI 時間間隔
-- `start-to-betStop`: 開始下注到停止下注的時間
-- `betStop-to-deal`: 停止下注到發牌的時間  
-- `deal-to-finish`: 發牌到結束的時間
-- `finish-to-start`: 結束到下一輪開始的時間
+### TableAPI Time Intervals
+- `start-to-betStop`: Time from betting start to betting stop
+- `betStop-to-deal`: Time from betting stop to dealing
+- `deal-to-finish`: Time from dealing to finish
+- `finish-to-start`: Time from finish to next round start
 
-### Roulette 設備時間間隔
-- `*X;2-to-*X;3`: 球發射到球落下的時間
-- `*X;3-to-*X;4`: 球落下到檢測的時間
-- `*X;4-to-*X;5`: 檢測到結果公布的時間
-- `*X;5-to-*X;2`: 結果公布到下一輪開始的時間
+### Roulette Device Time Intervals
+- `*X;2-to-*X;3`: Time from ball launch to ball landing
+- `*X;3-to-*X;4`: Time from ball landing to detection
+- `*X;4-to-*X;5`: Time from detection to result announcement
+- `*X;5-to-*X;2`: Time from result announcement to next round start
 
-### Sicbo 設備時間間隔
+### Sicbo Device Time Intervals
 
-#### Shaker 設備
-- `shakerStop-to-shakerShake`: 搖骰器停止到開始搖骰的時間
-- `shakerShake-to-shakerStop`: 搖骰到搖骰器停止的時間
+#### Shaker Device
+- `shakerStop-to-shakerShake`: Time from shaker stop to shake start
+- `shakerShake-to-shakerStop`: Time from shake start to shaker stop
 
-#### IDP 設備  
-- `sendDetect-to-receiveResult`: 發送檢測命令到接收結果的時間
-- `receiveResult-to-sendDetect`: 接收結果到下次發送檢測的時間
+#### IDP Device  
+- `sendDetect-to-receiveResult`: Time from sending detection command to receiving result
+- `receiveResult-to-sendDetect`: Time from receiving result to next detection send
 
-## 安裝
+## Installation
 
 ```bash
 cd studio-roundtime-monitor
 pip install -r requirements.txt
 ```
 
-## 使用方法
+## Usage
 
-### 1. 作為獨立服務運行
+### 1. Run as Standalone Service
 
 ```bash
 python -m studio_roundtime_monitor.main --config config/monitor_config.yaml
 ```
 
-### 2. 集成到現有遊戲模組
+### 2. Integrate into Existing Game Modules
 
 ```python
 from studio_roundtime_monitor import TimeMonitor
 
-# 初始化監控器
+# Initialize monitor
 monitor = TimeMonitor(config)
 
-# 在主遊戲模組中發布事件
+# Publish events in main game module
 monitor.publish_event('tableapi_start', {'table': 'PRD', 'round_id': '123'})
 monitor.publish_event('tableapi_betstop', {'table': 'PRD', 'round_id': '123'})
 ```
 
-## 配置
+## Configuration
 
-監控器支持通過 YAML 配置文件進行配置：
+The monitor supports configuration through YAML configuration file:
 
+### Local Storage Configuration
 ```yaml
 # config/monitor_config.yaml
 monitor:
@@ -88,9 +89,38 @@ events:
     topics: ['sicbo_shaker_start', 'sicbo_shaker_stop', 'sicbo_idp_send', 'sicbo_idp_receive']
 ```
 
-## 輸出格式
+### Telemetry Integration Configuration
+```yaml
+# config/telemetry_config.yaml
+storage:
+  type: 'telemetry'  # Send data to remote telemetry servers
+  
+  telemetry:
+    # Loki server for log data
+    loki:
+      enabled: true
+      url: "http://100.64.0.113:3100"  # GE server
+      instance_id: "studio-roundtime-monitor"
+    
+    # Prometheus Pushgateway for metrics
+    prometheus:
+      enabled: true
+      url: "http://100.64.0.113:9091"  # GE server
+      job_name: "studio-roundtime-monitor"
+    
+    # Data routing configuration
+    routing:
+      time_intervals:
+        loki: true      # Send to Loki for logs
+        prometheus: true # Send to Prometheus for metrics
+      errors:
+        loki: true      # Errors go to Loki only
+        prometheus: false
+```
 
-### JSON 格式
+## Output Format
+
+### JSON Format
 ```json
 {
   "timestamp": "2024-01-15T10:30:45.123456",
@@ -106,80 +136,125 @@ events:
 }
 ```
 
-### CSV 格式
+### CSV Format
 ```csv
 timestamp,game_type,table,round_id,interval_type,duration
 2024-01-15T10:30:45.123456,roulette,PRD,12345,start-to-betstop,15.2
 2024-01-15T10:31:00.223456,roulette,PRD,12345,betstop-to-deal,3.1
 ```
 
-## 架構設計
+## Architecture Design
 
 ```
 studio-roundtime-monitor/
 ├── studio_roundtime_monitor/
 │   ├── __init__.py
 │   ├── core/
-│   │   ├── event_system.py      # 事件發布/訂閱系統
-│   │   ├── time_monitor.py      # 主監控器類
-│   │   └── interval_calculator.py # 時間間隔計算器
+│   │   ├── event_system.py      # Event publish/subscribe system
+│   │   ├── time_monitor.py      # Main monitor class
+│   │   └── interval_calculator.py # Time interval calculator
 │   ├── monitors/
-│   │   ├── tableapi_monitor.py  # TableAPI 監控器
-│   │   ├── roulette_monitor.py  # Roulette 設備監控器
-│   │   └── sicbo_monitor.py     # Sicbo 設備監控器
+│   │   ├── tableapi_monitor.py  # TableAPI monitor
+│   │   ├── roulette_monitor.py  # Roulette device monitor
+│   │   └── sicbo_monitor.py     # Sicbo device monitor
 │   ├── storage/
-│   │   ├── json_storage.py      # JSON 存儲
-│   │   ├── csv_storage.py       # CSV 存儲
-│   │   └── database_storage.py  # 數據庫存儲
+│   │   ├── json_storage.py      # JSON storage
+│   │   ├── csv_storage.py       # CSV storage
+│   │   └── database_storage.py  # Database storage
 │   └── utils/
-│       ├── config.py            # 配置管理
-│       └── logger.py            # 日誌管理
+│       ├── config.py            # Configuration management
+│       └── logger.py            # Logging management
 ├── config/
-│   └── monitor_config.yaml      # 配置文件
+│   └── monitor_config.yaml      # Configuration file
 ├── examples/
-│   ├── roulette_integration.py  # Roulette 整合示例
-│   └── sicbo_integration.py     # Sicbo 整合示例
+│   ├── roulette_integration.py  # Roulette integration example
+│   └── sicbo_integration.py     # Sicbo integration example
 └── tests/
     ├── test_monitors.py
     └── test_storage.py
 ```
 
-## 整合指南
+## Telemetry Integration
 
-### 在 main_speed.py 中整合
+The Studio Round Time Monitor can integrate with remote telemetry infrastructure to send monitoring data to centralized logging and metrics systems.
+
+### Features
+
+- **Loki Integration**: Send detailed time interval logs to Loki for centralized logging
+- **Prometheus Integration**: Send metrics to Prometheus via Pushgateway for monitoring and alerting
+- **Data Routing**: Configure which data types go to which services
+- **Server Support**: Compatible with GE (100.64.0.113) and TPE (100.64.0.160) telemetry servers
+- **Automatic Metrics**: Generates counter and gauge metrics automatically
+
+### Quick Start with Telemetry
+
+1. **Configure telemetry storage**:
+```bash
+cp config/telemetry_config.yaml config/monitor_config.yaml
+```
+
+2. **Test the integration**:
+```bash
+python test_telemetry_integration.py
+```
+
+3. **Run with telemetry**:
+```bash
+python -m studio_roundtime_monitor.main --config config/telemetry_config.yaml
+```
+
+### Data Types and Routing
+
+| Data Type | Loki | Prometheus | Description |
+|-----------|------|------------|-------------|
+| Time Intervals | ✅ | ✅ | Detailed logs + metrics |
+| Errors | ✅ | ❌ | Error logs only |
+| Counters | ❌ | ✅ | Performance counters |
+| Gauges | ❌ | ✅ | Current values |
+
+### Monitoring and Visualization
+
+- **Loki Logs**: Query with `{job="studio-roundtime-monitor"}`
+- **Prometheus Metrics**: Query `time_interval_duration`, `intervals_processed_total`
+- **Grafana Dashboards**: Pre-configured dashboards available
+- **Alerting**: Configure alerts based on metrics thresholds
+
+## Integration Guide
+
+### Integration in main_speed.py
 
 ```python
-# 在文件開頭導入
+# Import at the beginning of file
 from studio_roundtime_monitor import TimeMonitor
 
-# 在 main() 函數中初始化
+# Initialize in main() function
 monitor = TimeMonitor(config)
 
-# 在關鍵時間點發布事件
+# Publish events at key time points
 monitor.publish_event('tableapi_start', {
     'table': table['name'], 
     'round_id': round_id
 })
 ```
 
-### 在 main_sicbo.py 中整合
+### Integration in main_sicbo.py
 
 ```python
-# 在 SDPGame 類中初始化監控器
+# Initialize monitor in SDPGame class
 self.time_monitor = TimeMonitor(config)
 
-# 在關鍵操作後發布事件
+# Publish events after key operations
 await self.time_monitor.publish_event('sicbo_shaker_start', {
     'round_id': round_id
 })
 ```
 
-## 開發狀態
+## Development Status
 
-- [x] 架構設計
-- [x] 事件系統
-- [ ] TableAPI 監控器
-- [ ] Roulette 監控器  
-- [ ] Sicbo 監控器
-- [ ] 數據存儲
-- [ ] 整合指南
+- [x] Architecture Design
+- [x] Event System
+- [ ] TableAPI Monitor
+- [ ] Roulette Monitor  
+- [ ] Sicbo Monitor
+- [ ] Data Storage
+- [ ] Integration Guide

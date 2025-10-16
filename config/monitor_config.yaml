@@ -9,11 +9,49 @@ monitor:
 
 # Storage configuration
 storage:
-  type: "json"  # Options: json, csv, database
-  path: "./data/time_intervals.json"
+  type: "telemetry"  # Options: json, csv, database, telemetry
+  path: "./data/time_intervals.json"  # Used for local storage types
   # database_url: "sqlite:///data/monitor.db"  # Uncomment for database storage
   # database_url: "postgresql://user:pass@localhost/monitor"  # PostgreSQL example
   # database_url: "mysql://user:pass@localhost/monitor"  # MySQL example
+  
+  # Telemetry configuration (used when type: "telemetry")
+  telemetry:
+    # Loki server configuration for log data
+    loki:
+      enabled: true
+      url: "http://100.64.0.113:3100"  # GE server default
+      # url: "http://100.64.0.160:3100"  # TPE server alternative
+      instance_id: "studio-roundtime-monitor"
+    
+    # Prometheus Pushgateway configuration for metrics
+    prometheus:
+      enabled: true
+      url: "http://100.64.0.113:9091"  # GE server default
+      # url: "http://100.64.0.160:9091"  # TPE server alternative
+      job_name: "studio-roundtime-monitor"
+    
+    # Data routing configuration
+    routing:
+      # Send time interval data to both Loki and Prometheus
+      time_intervals:
+        loki: true
+        prometheus: true
+      
+      # Send error data to Loki only (errors are typically logged)
+      errors:
+        loki: true
+        prometheus: false
+      
+      # Send counter metrics to Prometheus only
+      counters:
+        loki: false
+        prometheus: true
+      
+      # Send gauge metrics to Prometheus only
+      gauges:
+        loki: false
+        prometheus: true
 
 # Processing configuration
 processing:
