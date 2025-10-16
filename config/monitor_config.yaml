@@ -1,0 +1,40 @@
+# Studio Round Time Monitor Configuration
+
+# Monitor settings
+monitor:
+  enabled: true
+  tableapi_enabled: true
+  roulette_enabled: true
+  sicbo_enabled: true
+
+# Storage configuration
+storage:
+  type: "json"  # Options: json, csv, database
+  path: "./data/time_intervals.json"
+  # database_url: "sqlite:///data/monitor.db"  # Uncomment for database storage
+  # database_url: "postgresql://user:pass@localhost/monitor"  # PostgreSQL example
+  # database_url: "mysql://user:pass@localhost/monitor"  # MySQL example
+
+# Processing configuration
+processing:
+  interval: 5.0  # Processing interval in seconds
+  max_history: 1000  # Maximum number of intervals to keep in memory
+
+# Logging configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or console
+  file: "./logs/roundtime_monitor.log"
+  console: true
+
+# Export settings
+export:
+  default_format: "json"  # json or csv
+  output_dir: "./exports"
+  include_metadata: true
+
+# Performance settings
+performance:
+  batch_size: 100  # Number of intervals to process in batch
+  cleanup_days: 30  # Days of data to keep in storage
+  anomaly_threshold: 2.0  # Standard deviation multiplier for anomaly detection

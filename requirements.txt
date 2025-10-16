@@ -1,0 +1,22 @@
+# Core dependencies
+pyyaml>=6.0
+pydantic>=2.0
+asyncio-mqtt>=0.11.0
+sqlalchemy>=2.0
+pandas>=1.5.0
+numpy>=1.24.0
+aiofiles>=23.0.0
+structlog>=23.0.0
+
+# Development dependencies (optional)
+pytest>=7.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0
+flake8>=6.0
+
+# Database dependencies (optional)
+psycopg2-binary>=2.9.0
+pymysql>=1.0.0
